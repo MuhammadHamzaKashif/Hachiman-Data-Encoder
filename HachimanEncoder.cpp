@@ -1,8 +1,13 @@
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 #include <iostream>
 #include <cmath>
 #include <string>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 using namespace std;
 
 class HuffNode
@@ -264,10 +269,9 @@ string decode(string s, HuffNode *huffmanTree)
 }
 
 // Image compression part
-unsigned char *loadImage(string path, long long &data_size)
+unsigned char *loadImage(string path, int &width, int &height, int &channels)
 {
     // Loading the image
-    int width, height, channels;
     unsigned char *img_data = stbi_load(path.c_str(), &width, &height, &channels, 0);
 
     if (!img_data)
@@ -276,7 +280,6 @@ unsigned char *loadImage(string path, long long &data_size)
         return nullptr;
     }
     cout << "Image Loaded" << endl;
-    data_size = width * height * channels;
     return img_data;
 }
 HuffNode *buildHuffmanTreeForImage(unsigned char *img_data, long long data_size)
@@ -330,8 +333,9 @@ string *getHuffmanCodesForImage(HuffNode *h)
 string encodeImage(string path)
 {
     // Loading the image
-    long long data_size;
-    unsigned char *img_data = loadImage(path, data_size);
+    int width, height, channels;
+    unsigned char *img_data = loadImage(path, width, height, channels);
+    long long data_size = width * height * channels;
     if (!img_data)
         return "";
     string res = "";
@@ -343,17 +347,57 @@ string encodeImage(string path)
         int processed_val = pixel - (i == 0 ? 0 : (int)img_data[i-1]) + 255;
         res += codes[processed_val];
     }
-    stbi_free(img_data);
 
     return res;
 }
 
 
-
-
-double getCompressionRatio(string encodedShii, string text)
+// Saving the image after decoding
+void saveImage(string path, unsigned char *img_data, int width, int height, int channels)
 {
-    return (1.0 - (encodedShii.length()/((double)(text.length())*8)));
+    stbi_write_png(path.c_str(), width, height, channels, img_data, width*channels);
+    cout << "Decoded image saved" << endl;
+    delete[] img_data;
+}
+
+unsigned char *decodeImage(string encodeImage, HuffNode *huffmanTree, long long data_size)
+{
+    unsigned char *img_data = new unsigned char [data_size];
+    long long i = 0;
+
+    HuffNode *ptr = huffmanTree;
+    for (char bit : encodeImage)
+    {
+        if (bit == '0')
+            ptr = ptr->left;
+        else
+            ptr = ptr->right;
+        
+        if (!ptr->left && !ptr->right)
+        {
+            // Here we apply the reverse process of before
+            // first 255 is subtracted
+            // then the left val is added
+            int val = ptr->symbol - 255 + (i == 0 ? 0 : img_data[i-1]);
+
+            img_data[i] = (unsigned char)val;
+            i++;
+
+            ptr = huffmanTree;
+        }
+    }
+
+    return img_data;
+}
+
+
+
+
+
+
+double getCompressionRatio(long long encodedShiiLength, long long origLength)
+{
+    return (1.0 - (encodedShiiLength/((double)(origLength)*8)));
 }
 
 
@@ -373,7 +417,18 @@ int main()
     string encodedShii = encode(s, huffmanTree);
     cout << "Encoded: " << encodedShii << endl;
     cout << "Decoded: " << decode(encodedShii, huffmanTree) << endl;
-    cout << "Compression %age: " << getCompressionRatio(encodedShii, s)*100.0 << "%" << endl;
+    cout << "Compression %age: " << getCompressionRatio(encodedShii.length(), s.length())*100.0 << "%" << endl;
+
+    // string path = "3d-tech.jpg";
+    // int width, height, channels;
+    // unsigned char *img_data = loadImage(path, width, height, channels);
+    // long long data_size = width * height * channels;
+    // HuffNode *huffmanTree = buildHuffmanTreeForImage(img_data, data_size);
+    // string encodedShii = encodeImage(path);
+    // saveImage("dec_img.png", decodeImage(encodedShii, huffmanTree, data_size), width, height, channels);
+    // cout << "Compression %age: " << getCompressionRatio(encodedShii.length(), data_size)*100.0 << "%" << endl;
+    // delete[] img_data;
+    // delete huffmanTree;
 
     return 0;
 }
