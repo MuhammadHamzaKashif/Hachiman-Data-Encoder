@@ -1,32 +1,33 @@
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 #include <iostream>
 #include <cmath>
 #include <string>
 using namespace std;
 
-
 class HuffNode
 {
 public:
-    char c;
+    int symbol;
     int f;
     HuffNode *left;
     HuffNode *right;
     HuffNode();
-    HuffNode(char c, int f);
+    HuffNode(int symbol, int f);
     ~HuffNode();
 };
 
 HuffNode::HuffNode()
 {
-    this->c = ' ';
+    this->symbol = 0;
     this->f = 0;
     this->left = nullptr;
     this->right = nullptr;
 }
 
-HuffNode::HuffNode(char c, int f)
+HuffNode::HuffNode(int symbol, int f)
 {
-    this->c = c;
+    this->symbol = symbol;
     this->f = f;
     this->left = nullptr;
     this->right = nullptr;
@@ -35,7 +36,6 @@ HuffNode::HuffNode(char c, int f)
 HuffNode::~HuffNode()
 {
 }
-
 
 
 class HuffHeap
@@ -184,7 +184,7 @@ HuffNode *buildHuffmanTree(string s)
     for (int i = 0; i < 256; i++)
     {
         if (charFreqs[i] > 0)
-            h->push(new HuffNode(char(i), charFreqs[i]));
+            h->push(new HuffNode(i, charFreqs[i]));
     }
     while (h->getSize() > 1)
     {
@@ -205,7 +205,7 @@ void generateCodes(HuffNode *h, string code, string codes[])
     if (!h) return;
     if (!h->left && !h->right)
     {
-        codes[int(h->c)] = code;
+        codes[h->symbol] = code;
         return;
     }
     generateCodes(h->left, code + "0", codes);
@@ -256,12 +256,99 @@ string decode(string s, HuffNode *huffmanTree)
 
         if (!ptr->left && !ptr->right)
         {
-            res += ptr->c;
+            res += (char)ptr->symbol;
             ptr = huffmanTree;
         }
     }
     return res;
 }
+
+// Image compression part
+unsigned char *loadImage(string path, long long &data_size)
+{
+    // Loading the image
+    int width, height, channels;
+    unsigned char *img_data = stbi_load(path.c_str(), &width, &height, &channels, 0);
+
+    if (!img_data)
+    {
+        cout << "Error loading the image" << endl;
+        return nullptr;
+    }
+    cout << "Image Loaded" << endl;
+    data_size = width * height * channels;
+    return img_data;
+}
+HuffNode *buildHuffmanTreeForImage(unsigned char *img_data, long long data_size)
+{
+    // Array size is 511 because after processing the
+    // pixel values, the range of them is [0, 510]
+    int freqs[511] = {0};
+    for (long long i = 0; i < data_size; i++)
+    {
+        // Used predictive coding here
+        // As the pixel values are quite close,
+        // We subtract the left val from the current pixel val
+        // this creates a list of repeating vals on which
+        // effective huffman encoding can be applied
+        // To cater for negative vals, we add 255
+
+        int pixel = (int)img_data[i];
+        int processed_val = pixel - (i == 0 ? 0 : (int)img_data[i-1]) + 255;
+        freqs[processed_val]++;
+    }
+
+    HuffHeap *h = new HuffHeap(511);
+    for (int i = 0; i < 511; i++)
+    {
+        if (freqs[i] > 0)
+            h->push(new HuffNode(i, freqs[i]));
+    }
+    while (h->getSize() > 1)
+    {
+        HuffNode *left = h->pop();
+        HuffNode *right = h->pop();
+        HuffNode *newNode = new HuffNode();
+        newNode->f = left->f + right->f;
+        newNode->left = left;
+        newNode->right = right;
+        h->push(newNode);
+    }
+    HuffNode* root = h->pop();
+    delete h;
+    return root;
+}
+
+string *getHuffmanCodesForImage(HuffNode *h)
+{
+    static string codes[511];
+    for (int i = 0; i < 511; i++) codes[i] = "";
+    generateCodes(h, "", codes);
+    return codes;
+}
+
+string encodeImage(string path)
+{
+    // Loading the image
+    long long data_size;
+    unsigned char *img_data = loadImage(path, data_size);
+    if (!img_data)
+        return "";
+    string res = "";
+    HuffNode *huffmanTree = buildHuffmanTreeForImage(img_data, data_size);
+    string *codes = getHuffmanCodesForImage(huffmanTree);
+    for (long long i = 0; i < data_size; i++)
+    {
+        int pixel = (int)img_data[i];
+        int processed_val = pixel - (i == 0 ? 0 : (int)img_data[i-1]) + 255;
+        res += codes[processed_val];
+    }
+    stbi_free(img_data);
+
+    return res;
+}
+
+
 
 
 double getCompressionRatio(string encodedShii, string text)
