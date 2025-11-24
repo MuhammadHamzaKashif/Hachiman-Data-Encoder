@@ -40,6 +40,8 @@ HuffNode::HuffNode(int symbol, int f)
 
 HuffNode::~HuffNode()
 {
+    delete left;
+    delete right;  
 }
 
 
