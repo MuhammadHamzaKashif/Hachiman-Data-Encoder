@@ -1,6 +1,12 @@
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <vector>
+#include <iomanip>
+#include <stdexcept>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <openssl/err.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -405,6 +411,67 @@ double getCompressionRatio(long long encodedShiiLength, long long origLength)
 
 
 
+vector<unsigned char> packBits(const string &bitstring)
+{
+    vector<unsigned char> bytes;
+    unsigned char currByte = 0;
+    int bitNum = 0;
+
+    for (char bit : bitstring)
+    {
+        // Shifting curr byte left
+        currByte <<= 1;
+
+        // If char is 1, we set the least significant bit
+        if (bit == '1')
+            currByte |= 1;
+
+        // Moving to next bit
+        bitNum++;
+
+        // When 8 bits are pushed, we push our
+        // completed byte to result vector
+        if (bitNum == 8)
+        {
+            bytes.push_back(currByte);
+            currByte = 0;
+            bitNum = 0;
+        }
+    }
+
+    // Last remaining bits
+    if (bitNum > 0)
+    {
+        currByte <<= (8 - bitNum);
+        bytes.push_back(currByte);
+    }
+
+    return bytes;
+}
+
+string unpackBits(const vector<unsigned char> &bytes, size_t origBitLength)
+{
+    string bitString = "";
+
+    for (unsigned char byte : bytes)
+    {
+        for (int i = 7; i >= 0; --i)
+        {
+            if (bitString.length() >= origBitLength)
+                break;
+
+            // Depending on the ith bit, add 0 or 1
+            bitString += ((byte >> i) & 1) ? '1' : '0';
+        }
+
+    }
+    return bitString;
+}
+
+void handleOpenSSLErrors()
+{
+    throw runtime_error("An OpenSSL error occured");
+}
 
 int main()
 {
