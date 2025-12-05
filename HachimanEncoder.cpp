@@ -1,9 +1,12 @@
 #include <iostream>
 #include <cmath>
+#include <cstring>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include <iomanip>
 #include <stdexcept>
+#include <iconv.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/err.h>
@@ -183,6 +186,35 @@ HuffHeap::~HuffHeap()
 
 
 
+std::string utf8ToAsciiIconv(const std::string& input) {
+    iconv_t cd = iconv_open("ASCII//TRANSLIT", "UTF-8");
+    if (cd == (iconv_t)-1) {
+        perror("iconv_open");
+        return "";
+    }
+
+    size_t inBytesLeft = input.size();
+    size_t outBytesLeft = inBytesLeft * 2; // allocate enough space
+    char* inBuf = const_cast<char*>(input.c_str());
+    char* outBufStart = (char*)malloc(outBytesLeft);
+    if (!outBufStart) {
+        iconv_close(cd);
+        return "";
+    }
+    char* outBuf = outBufStart;
+
+    size_t result = iconv(cd, &inBuf, &inBytesLeft, &outBuf, &outBytesLeft);
+    if (result == (size_t)-1) {
+        perror("iconv");
+    }
+
+    std::string output(outBufStart, outBuf - outBufStart);
+
+    free(outBufStart);
+    iconv_close(cd);
+
+    return output;
+}
 
 
 
