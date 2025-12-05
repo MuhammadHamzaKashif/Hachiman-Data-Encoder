@@ -472,6 +472,89 @@ void handleOpenSSLErrors()
 {
     throw runtime_error("An OpenSSL error occured");
 }
+vector<unsigned char> encryptEncodedShii(const vector<unsigned char> &plaintext, const unsigned char *key, const unsigned char *iv)
+{
+    EVP_CIPHER_CTX *ctx;
+
+    vector<unsigned char> ciphertext(plaintext.size() + EVP_MAX_BLOCK_LENGTH);
+    int len = 0;
+    int ciphertextLen = 0;
+
+    if (!(ctx = EVP_CIPHER_CTX_new()))
+    {
+        handleOpenSSLErrors();
+    }
+
+    if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        handleOpenSSLErrors();
+    }
+
+    if (1 != EVP_EncryptUpdate(ctx, ciphertext.data(), &len, plaintext.data(), plaintext.size()))
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        handleOpenSSLErrors();
+    }
+
+    ciphertextLen = len;
+
+    if (1 != EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &len))
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        handleOpenSSLErrors();
+    }
+    ciphertextLen += len;
+
+    EVP_CIPHER_CTX_free(ctx);
+
+    ciphertext.resize(ciphertextLen);
+
+    return ciphertext;
+}
+
+
+vector<unsigned char> decryptEncodedShii(const vector<unsigned char>& ciphertext, const unsigned char* key, const unsigned char* iv)
+{
+    EVP_CIPHER_CTX* ctx;
+
+    vector<unsigned char> plaintext(ciphertext.size());
+    int len = 0;
+    int plaintextLen = 0;
+
+    if (!(ctx = EVP_CIPHER_CTX_new()))
+    {
+        handleOpenSSLErrors();
+    }
+
+    if (1 != EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        handleOpenSSLErrors();
+    }
+
+    if (1 != EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(), ciphertext.size()))
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        handleOpenSSLErrors();
+    }
+    plaintextLen = len;
+
+
+    if (1 != EVP_DecryptFinal_ex(ctx, plaintext.data() + len, &len))
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        handleOpenSSLErrors();
+    }
+    plaintextLen += len;
+
+    EVP_CIPHER_CTX_free(ctx);
+
+    plaintext.resize(plaintextLen);
+
+    return plaintext;
+}
+
 
 int main()
 {
