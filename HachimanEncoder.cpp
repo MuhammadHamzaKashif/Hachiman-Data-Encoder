@@ -46,8 +46,6 @@ HuffNode::HuffNode(int symbol, int f)
 
 HuffNode::~HuffNode()
 {
-    delete left;
-    delete right;  
 }
 
 
@@ -145,7 +143,7 @@ void HuffHeap::push(HuffNode *val)
 
 
 HuffNode* HuffHeap::pop() {
-    if (isEmpty()) 
+    if (isEmpty())
     {
         cout << "Empty" << endl;
         return nullptr;
@@ -155,12 +153,12 @@ HuffNode* HuffHeap::pop() {
     arr[1] = arr[size--];
 
     int k = 1;
-    while (true) 
+    while (true)
     {
         int left = 2 * k;
         int right = 2 * k + 1;
 
-        if (left > size) 
+        if (left > size)
             break;
 
         int smallest = left;
@@ -168,7 +166,7 @@ HuffNode* HuffHeap::pop() {
         if (right <= size && arr[right]->f < arr[left]->f)
             smallest = right;
 
-        if (arr[k]->f <= arr[smallest]->f) 
+        if (arr[k]->f <= arr[smallest]->f)
             break;
 
         swap(arr[k], arr[smallest]);
@@ -243,7 +241,7 @@ void drawTable(string s, string *codes)
         if (charFreqs[i] > 0)
             cout << "  " << char(i) << "  |   " << charFreqs[i] << "  | " << codes[i] << endl;
     }
-    
+
 }
 
 
@@ -261,7 +259,7 @@ string decode(string s, HuffNode *huffmanTree)
     string res = "";
     HuffNode *ptr = huffmanTree;
     for (char c : s)
-    {   
+    {
         if (c == '0')
             ptr = ptr->left;
         else
@@ -380,7 +378,7 @@ unsigned char *decodeImage(string encodeImage, HuffNode *huffmanTree, long long 
             ptr = ptr->left;
         else
             ptr = ptr->right;
-        
+
         if (!ptr->left && !ptr->right)
         {
             // Here we apply the reverse process of before
@@ -397,17 +395,6 @@ unsigned char *decodeImage(string encodeImage, HuffNode *huffmanTree, long long 
 
     return img_data;
 }
-
-
-
-
-
-
-double getCompressionRatio(long long encodedShiiLength, long long origLength)
-{
-    return (1.0 - (encodedShiiLength/((double)(origLength)*8)));
-}
-
 
 
 
@@ -507,7 +494,6 @@ vector<unsigned char> encryptEncodedShii(const vector<unsigned char> &plaintext,
     ciphertextLen += len;
 
     EVP_CIPHER_CTX_free(ctx);
-
     ciphertext.resize(ciphertextLen);
 
     return ciphertext;
@@ -517,7 +503,6 @@ vector<unsigned char> encryptEncodedShii(const vector<unsigned char> &plaintext,
 vector<unsigned char> decryptEncodedShii(const vector<unsigned char>& ciphertext, const unsigned char* key, const unsigned char* iv)
 {
     EVP_CIPHER_CTX* ctx;
-
     vector<unsigned char> plaintext(ciphertext.size());
     int len = 0;
     int plaintextLen = 0;
@@ -556,6 +541,31 @@ vector<unsigned char> decryptEncodedShii(const vector<unsigned char>& ciphertext
 }
 
 
+
+
+
+
+
+
+
+
+double getCompressionRatio(long long encodedShiiLength, long long origLength)
+{
+    return (1.0 - (encodedShiiLength/((double)(origLength)*8)));
+}
+
+void print_hex(const string& label, const vector<unsigned char>& data)
+{
+    cout << label;
+    for (const auto& byte : data)
+    {
+        cout << hex << setw(2) << setfill('0') << (int)byte;
+    }
+    cout << dec << endl;
+}
+
+
+
 int main()
 {
     cout << "Enter text: ";
@@ -568,7 +578,40 @@ int main()
     drawTable(s, codes);
     string encodedShii = encode(s, huffmanTree);
     cout << "Encoded: " << encodedShii << endl;
-    cout << "Decoded: " << decode(encodedShii, huffmanTree) << endl;
+
+    unsigned char key[32];
+
+    unsigned char iv[16];
+
+    if (!RAND_bytes(key, sizeof(key)) || !RAND_bytes(iv, sizeof(iv)))
+    {
+        cerr << "FATAL: Could not generate random key/IV." << endl;
+        return 1;
+    }
+
+
+
+
+
+    size_t original_bit_length = encodedShii.length();
+    vector<unsigned char> packed_data = packBits(encodedShii);
+    cout << "Packed data size: " << packed_data.size() << " bytes" << endl;
+
+    cout << "--- Encryption ---" << endl;
+
+    vector<unsigned char> encrypted_data = encryptEncodedShii(packed_data, key, iv);
+
+    print_hex("Encrypted (Hex): ", encrypted_data);
+    cout << "Encrypted data size: " << encrypted_data.size() << " bytes" << endl;
+
+    cout << "--- Decryption ---" << endl;
+    vector<unsigned char> decrypted_data = decryptEncodedShii(encrypted_data, key, iv);
+    cout << "Decrypted data size: " << decrypted_data.size() << " bytes" << endl;
+
+    string unpacked_bitstring = unpackBits(decrypted_data, original_bit_length);
+    cout << "Unpacked Bitstring: " << unpacked_bitstring << endl;
+
+    cout << "Decoded: " << decode(unpacked_bitstring, huffmanTree) << endl;
     cout << "Compression %age: " << getCompressionRatio(encodedShii.length(), s.length())*100.0 << "%" << endl;
 
     // string path = "3d-tech.jpg";
