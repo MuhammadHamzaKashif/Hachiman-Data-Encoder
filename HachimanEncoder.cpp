@@ -186,7 +186,7 @@ HuffHeap::~HuffHeap()
 
 
 
-std::string utf8ToAsciiIconv(const std::string& input) {
+string utf8ToAsciiIconv(const string& input) {
     iconv_t cd = iconv_open("ASCII//TRANSLIT", "UTF-8");
     if (cd == (iconv_t)-1) {
         perror("iconv_open");
@@ -208,7 +208,7 @@ std::string utf8ToAsciiIconv(const std::string& input) {
         perror("iconv");
     }
 
-    std::string output(outBufStart, outBuf - outBufStart);
+    string output(outBufStart, outBuf - outBufStart);
 
     free(outBufStart);
     iconv_close(cd);
