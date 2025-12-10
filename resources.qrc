@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icon_ore2.png</file>
+        <file>hachi.png</file>
+        <file>saika.png</file>
+    </qresource>
+</RCC>

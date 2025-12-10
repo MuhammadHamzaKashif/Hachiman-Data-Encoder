@@ -7,6 +7,9 @@
 #include <vector>
 #include <algorithm>
 #include <QTableWidget>
+#include <map>
+#include <QLabel>        // For watermark
+#include <QResizeEvent>  // For resizing
 #include "HuffmanLogic.h"
 
 QT_BEGIN_NAMESPACE
@@ -21,25 +24,44 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+protected:
+    // Override resizeEvent to keep watermark in corner & on top
+    void resizeEvent(QResizeEvent *event) override;
+
 private slots:
     // Navigation
     void on_btnTextMode_clicked();
     void on_btnImageMode_clicked();
+    void on_btnDecompressTextMode_clicked();
+    void on_btnDecompressImageMode_clicked();
+
+    // Back Buttons
     void on_btnBack_clicked();
     void on_btnBack2_clicked();
+    void on_btnBack3_clicked();
+    void on_btnBack4_clicked();
 
-    // TEXT Page Slots
+    // TEXT COMPRESSION
     void on_btnCompressText_clicked();
     void on_btnReset_clicked();
     void on_btnStep_clicked();
     void on_zoomSlider_valueChanged(int value);
+    void on_btnSaveTextHuff_clicked();
 
-    // IMAGE Page Slots
+    // IMAGE COMPRESSION
     void on_btnSelectImage_clicked();
     void on_btnCompressImage_clicked();
     void on_btnStepImage_clicked();
-    void on_btnResetImage_clicked();     // <--- NEW: Reset Button Slot
+    void on_btnResetImage_clicked();
     void on_zoomSliderImage_valueChanged(int value);
+    void on_btnSaveHuff_clicked();
+
+    // DECOMPRESSION PAGES
+    void on_btnDecompressTextAction_clicked();
+    void on_zoomSliderTextDecomp_valueChanged(int value);
+    void on_btnOpenHuff_clicked();
+    void on_zoomSliderImageDecomp_valueChanged(int value);
+
 
 private:
     Ui::MainWindow *ui;
@@ -47,21 +69,28 @@ private:
     // Scenes
     QGraphicsScene *sceneText;
     QGraphicsScene *sceneImage;
+    QGraphicsScene *sceneTextDecomp;
+    QGraphicsScene *sceneImageDecomp;
 
-    // The visualizer "Forest"
+    // Data
     std::vector<HuffNode*> forest;
-
-    // Store current image path
     QString currentImagePath;
 
-    // Helpers
+    // Watermark Label
+    QLabel *watermarkLabel;
+
+    // Visual Helpers
     void drawForest(QGraphicsScene* targetScene);
     void drawTreeRecursive(QGraphicsScene* sc, HuffNode* node, double xLeft, double xRight, double y);
     int getLeafCount(HuffNode* node);
-    void displayTableInUI(QTableWidget* table, int* freqs, std::string *codes, int range);
-    void initializeImageForest();
 
-    string utf8ToAsciiIconv(const string& input);
+    // Logic Helpers
+    void displayTableInUI(QTableWidget* table, std::map<int, int> freqs, std::string *codes, int range);
+    void initializeImageForest();
+    void extractFreqsFromTree(HuffNode* root, std::map<int, int>& map);
+
+    // NEW: Custom Success Popup Helper
+    void showCustomSuccessPopup(QString message);
 };
 
 #endif // MAINWINDOW_H
