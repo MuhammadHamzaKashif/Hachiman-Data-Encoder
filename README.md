@@ -64,6 +64,8 @@ Huffman-based text and image compression.
 ---
 ## Results
 - An average compression ratio of ~50 to 60% is observed
+- Algorithmic complexity ~O(n) or O(k) in most functions
+- where k is either 255 or 510
 
 ---
 
