@@ -1,6 +1,14 @@
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <vector>
+#include <iomanip>
+#include <stdexcept>
+#include <cstring>
+#include <cstdlib>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <openssl/err.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -10,6 +18,7 @@
 
 using namespace std;
 
+// Class for node of the huffman tree
 class HuffNode
 {
 public:
@@ -45,6 +54,7 @@ HuffNode::~HuffNode()
 }
 
 
+// Class for heap containing huffman nodes
 class HuffHeap
 {
 private:
@@ -181,7 +191,12 @@ HuffHeap::~HuffHeap()
 
 
 
-
+// first we initialize an array of 256 chars (for ASCII vals)
+// then we find the frequency by direct addressing
+// then we insert the chars having more than 1 freq (occuring at least once) to the heap
+// then we pop first two elements from heap and join them and make a new node
+// continue this step tll only one node remains
+// this will be the huffman tree
 HuffNode *buildHuffmanTree(string s)
 {
     int charFreqs[256] = {0};
@@ -207,6 +222,10 @@ HuffNode *buildHuffmanTree(string s)
     delete h;
     return root;
 }
+
+// recursively generate codes by
+// diving into the huffman tree and
+// mapping the codes in an array
 void generateCodes(HuffNode *h, string code, string codes[])
 {
     if (!h) return;
@@ -226,6 +245,7 @@ string *getHuffmanCodes(HuffNode *h)
     return codes;
 }
 
+// draws table of chars, their freq, and their codes 
 void drawTable(string s, string *codes)
 {
     int charFreqs[256] = {0};
@@ -393,9 +413,158 @@ unsigned char *decodeImage(string encodeImage, HuffNode *huffmanTree, long long 
 }
 
 
+vector<unsigned char> packBits(const string &bitstring)
+{
+    vector<unsigned char> bytes;
+    unsigned char currByte = 0;
+    int bitNum = 0;
+
+    for (char bit : bitstring)
+    {
+        // Shifting curr byte left
+        currByte <<= 1;
+
+        // If char is 1, we set the least significant bit
+        if (bit == '1')
+            currByte |= 1;
+
+        // Moving to next bit
+        bitNum++;
+
+        // When 8 bits are pushed, we push our
+        // completed byte to result vector
+        if (bitNum == 8)
+        {
+            bytes.push_back(currByte);
+            currByte = 0;
+            bitNum = 0;
+        }
+    }
+
+    // Last remaining bits
+    if (bitNum > 0)
+    {
+        currByte <<= (8 - bitNum);
+        bytes.push_back(currByte);
+    }
+
+    return bytes;
+}
+
+string unpackBits(const vector<unsigned char> &bytes, size_t origBitLength)
+{
+    string bitString = "";
+
+    for (unsigned char byte : bytes)
+    {
+        for (int i = 7; i >= 0; --i)
+        {
+            if (bitString.length() >= origBitLength)
+                break;
+
+            // Depending on the ith bit, add 0 or 1
+            bitString += ((byte >> i) & 1) ? '1' : '0';
+        }
+
+    }
+    return bitString;
+}
+
+void handleOpenSSLErrors()
+{
+    throw runtime_error("An OpenSSL error occured");
+}
+
+vector<unsigned char> encryptEncodedShii(const vector<unsigned char> &plaintext, const unsigned char *key, const unsigned char *iv)
+{
+    EVP_CIPHER_CTX *ctx;
+
+    vector<unsigned char> ciphertext(plaintext.size() + EVP_MAX_BLOCK_LENGTH);
+    int len = 0;
+    int ciphertextLen = 0;
+
+    if (!(ctx = EVP_CIPHER_CTX_new()))
+    {
+        handleOpenSSLErrors();
+    }
+
+    if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        handleOpenSSLErrors();
+    }
+
+    if (1 != EVP_EncryptUpdate(ctx, ciphertext.data(), &len, plaintext.data(), plaintext.size()))
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        handleOpenSSLErrors();
+    }
+
+    ciphertextLen = len;
+
+    if (1 != EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &len))
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        handleOpenSSLErrors();
+    }
+    ciphertextLen += len;
+
+    EVP_CIPHER_CTX_free(ctx);
+    ciphertext.resize(ciphertextLen);
+
+    return ciphertext;
+}
 
 
+vector<unsigned char> decryptEncodedShii(const vector<unsigned char>& ciphertext, const unsigned char* key, const unsigned char* iv)
+{
+    EVP_CIPHER_CTX* ctx;
+    vector<unsigned char> plaintext(ciphertext.size());
+    int len = 0;
+    int plaintextLen = 0;
 
+    if (!(ctx = EVP_CIPHER_CTX_new()))
+    {
+        handleOpenSSLErrors();
+    }
+
+    if (1 != EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        handleOpenSSLErrors();
+    }
+
+    if (1 != EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(), ciphertext.size()))
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        handleOpenSSLErrors();
+    }
+    plaintextLen = len;
+
+
+    if (1 != EVP_DecryptFinal_ex(ctx, plaintext.data() + len, &len))
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        handleOpenSSLErrors();
+    }
+    plaintextLen += len;
+
+    EVP_CIPHER_CTX_free(ctx);
+
+    plaintext.resize(plaintextLen);
+
+    return plaintext;
+}
+
+void print_hex(const string& label, const vector<unsigned char>& data)
+{
+    cout << label;
+    for (const auto& byte : data)
+    {
+        cout << hex << setw(2) << setfill('0') << (int)byte;
+    }
+    cout << dec << endl;
+}
 
 double getCompressionRatio(long long encodedShiiLength, long long origLength)
 {
@@ -418,7 +587,34 @@ int main()
     drawTable(s, codes);
     string encodedShii = encode(s, huffmanTree);
     cout << "Encoded: " << encodedShii << endl;
-    cout << "Decoded: " << decode(encodedShii, huffmanTree) << endl;
+
+    // --- ENCRYPTION SETUP ---
+    unsigned char key[32];
+    unsigned char iv[16];
+
+    if (!RAND_bytes(key, sizeof(key)) || !RAND_bytes(iv, sizeof(iv)))
+    {
+        cerr << "FATAL: Could not generate random key/IV." << endl;
+        return 1;
+    }
+
+    size_t original_bit_length = encodedShii.length();
+    vector<unsigned char> packed_data = packBits(encodedShii);
+    cout << "Packed data size: " << packed_data.size() << " bytes" << endl;
+
+    cout << "--- Encryption ---" << endl;
+    vector<unsigned char> encrypted_data = encryptEncodedShii(packed_data, key, iv);
+    print_hex("Encrypted (Hex): ", encrypted_data);
+    cout << "Encrypted data size: " << encrypted_data.size() << " bytes" << endl;
+
+    cout << "--- Decryption ---" << endl;
+    vector<unsigned char> decrypted_data = decryptEncodedShii(encrypted_data, key, iv);
+    cout << "Decrypted data size: " << decrypted_data.size() << " bytes" << endl;
+
+    string unpacked_bitstring = unpackBits(decrypted_data, original_bit_length);
+    cout << "Unpacked Bitstring: " << unpacked_bitstring << endl;
+
+    cout << "Decoded: " << decode(unpacked_bitstring, huffmanTree) << endl;
     cout << "Compression %age: " << getCompressionRatio(encodedShii.length(), s.length())*100.0 << "%" << endl;
 
     // string path = "3d-tech.jpg";

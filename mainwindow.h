@@ -8,12 +8,15 @@
 #include <algorithm>
 #include <QTableWidget>
 #include <map>
-#include <QLabel>        // For watermark
-#include <QResizeEvent>  // For resizing
+#include <QLabel>
+#include <QResizeEvent>
 #include "HuffmanLogic.h"
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindow; }
+namespace Ui
+{
+class MainWindow;
+}
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
@@ -25,30 +28,30 @@ public:
     ~MainWindow();
 
 protected:
-    // Override resizeEvent to keep watermark in corner & on top
+    // Override resizeEvent to keep watermark in corner
     void resizeEvent(QResizeEvent *event) override;
 
 private slots:
-    // Navigation
+    // Navigation Slots
     void on_btnTextMode_clicked();
     void on_btnImageMode_clicked();
     void on_btnDecompressTextMode_clicked();
     void on_btnDecompressImageMode_clicked();
 
-    // Back Buttons
+    // Back Button Slots
     void on_btnBack_clicked();
     void on_btnBack2_clicked();
     void on_btnBack3_clicked();
     void on_btnBack4_clicked();
 
-    // TEXT COMPRESSION
+    // Text Compression Slots
     void on_btnCompressText_clicked();
     void on_btnReset_clicked();
     void on_btnStep_clicked();
     void on_zoomSlider_valueChanged(int value);
     void on_btnSaveTextHuff_clicked();
 
-    // IMAGE COMPRESSION
+    // Image Compression Slots
     void on_btnSelectImage_clicked();
     void on_btnCompressImage_clicked();
     void on_btnStepImage_clicked();
@@ -56,7 +59,7 @@ private slots:
     void on_zoomSliderImage_valueChanged(int value);
     void on_btnSaveHuff_clicked();
 
-    // DECOMPRESSION PAGES
+    // Decompression Slots
     void on_btnDecompressTextAction_clicked();
     void on_zoomSliderTextDecomp_valueChanged(int value);
     void on_btnOpenHuff_clicked();
@@ -66,17 +69,17 @@ private slots:
 private:
     Ui::MainWindow *ui;
 
-    // Scenes
+    // Scenes for graphics views
     QGraphicsScene *sceneText;
     QGraphicsScene *sceneImage;
     QGraphicsScene *sceneTextDecomp;
     QGraphicsScene *sceneImageDecomp;
 
-    // Data
+    // Data structures for algorithm
     std::vector<HuffNode*> forest;
     QString currentImagePath;
 
-    // Watermark Label
+    // UI Elements
     QLabel *watermarkLabel;
 
     // Visual Helpers
@@ -89,8 +92,8 @@ private:
     void initializeImageForest();
     void extractFreqsFromTree(HuffNode* root, std::map<int, int>& map);
 
-    // NEW: Custom Success Popup Helper
+    // Custom Success Popup Helper
     void showCustomSuccessPopup(QString message);
 };
 
-#endif // MAINWINDOW_H
+#endif
