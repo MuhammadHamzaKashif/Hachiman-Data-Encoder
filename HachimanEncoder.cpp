@@ -10,6 +10,7 @@
 
 using namespace std;
 
+// Class for node of the huffman tree
 class HuffNode
 {
 public:
@@ -45,6 +46,7 @@ HuffNode::~HuffNode()
 }
 
 
+// Class for heap containing huffman nodes
 class HuffHeap
 {
 private:
@@ -181,7 +183,12 @@ HuffHeap::~HuffHeap()
 
 
 
-
+// first we initialize an array of 256 chars (for ASCII vals)
+// then we find the frequency by direct addressing
+// then we insert the chars having more than 1 freq (occuring at least once) to the heap
+// then we pop first two elements from heap and join them and make a new node
+// continue this step tll only one node remains
+// this will be the huffman tree
 HuffNode *buildHuffmanTree(string s)
 {
     int charFreqs[256] = {0};
@@ -207,6 +214,10 @@ HuffNode *buildHuffmanTree(string s)
     delete h;
     return root;
 }
+
+// recursively generate codes by
+// diving into the huffman tree and
+// mapping the codes in an array
 void generateCodes(HuffNode *h, string code, string codes[])
 {
     if (!h) return;
@@ -226,6 +237,7 @@ string *getHuffmanCodes(HuffNode *h)
     return codes;
 }
 
+// draws table of chars, their freq, and their codes 
 void drawTable(string s, string *codes)
 {
     int charFreqs[256] = {0};
